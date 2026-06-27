@@ -8,10 +8,10 @@ back over your sessions, distills what's worth keeping into proposals you approv
 surfaces the right knowledge in future prompts — so each day's work compounds instead of evaporating.
 
 <p align="center">
-  <img src="assets/reflect-review.gif" width="760"
-       alt="The reflect loop: /reflect distills sessions, /reflect-review promotes approved memories, and a later session shows the retrieval hook injecting one automatically">
+  <img src="assets/demo.gif" width="760"
+       alt="The reflect loop: /reflect distills sessions, /reflect-curate promotes approved memories, and a later session shows the retrieval hook injecting one automatically">
   <br>
-  <sub><i>The whole loop — <code>/reflect</code> distills the day's sessions, <code>/reflect-review</code> promotes what you approve, and a week later the hook recalls it on its own.</i></sub>
+  <sub><i>The whole loop — <code>/reflect</code> distills the day's sessions, <code>/reflect-curate</code> promotes what you approve, and a week later the hook recalls it on its own.</i></sub>
 </p>
 
 You stay in control: the loop only ever *proposes*, and your knowledge lives as plain markdown in
@@ -40,7 +40,7 @@ git clone https://github.com/mtthsnc/reflect && cd reflect
 ```
 
 Restart any open Claude Code sessions so the hook loads. That's it — reflect now runs nightly and
-retrieves on its own. Run `/reflect` any time to distill immediately, and `/reflect-review` to
+retrieves on its own. Run `/reflect` any time to distill immediately, and `/reflect-curate` to
 approve what it found.
 
 ## How it works
@@ -51,7 +51,7 @@ happened: what you were trying to do, where things went sideways, the preference
 remembering. It writes those up as **proposals** and sets them aside with a short digest. Nothing has
 touched your knowledge base yet.
 
-When you're ready, you run `/reflect-review`. Here you're the editor: approve the sharp ones, drop the
+When you're ready, you run `/reflect-curate`. Here you're the editor: approve the sharp ones, drop the
 noise, tweak wording. Only what you approve moves into your **store**.
 
 From then on you do nothing. Each time you send a prompt, a hook quietly checks your store and, if
@@ -59,7 +59,7 @@ something is relevant, slips the **top few** matching entries into Claude's cont
 never the whole pile. The store can grow for years while what Claude sees each turn stays small.
 
 ```
- sessions  ──/reflect──▶  queue  ──/reflect-review──▶  store  ──retrieval hook──▶  future
+ sessions  ──/reflect──▶  queue  ──/reflect-curate──▶  store  ──retrieval hook──▶  future
  (.jsonl)    distill,      (you      promote          (memories   top-k injected     prompts
              nightly       approve)                    + docs)     per prompt
              or on demand)
@@ -84,7 +84,7 @@ a11y/code-style rules + ADRs codified as machine-readable files, paired with aut
 conformance gates whose failures feed back to refine the spec.
 ```
 
-You approve it in `/reflect-review`; it moves into `store/memories/`. Then, days later, a prompt that
+You approve it in `/reflect-curate`; it moves into `store/memories/`. Then, days later, a prompt that
 touches the topic makes the hook inject *just that entry* — before Claude even starts answering:
 
 ```
@@ -102,14 +102,14 @@ You didn't load anything. You didn't even remember the memory existed. It was si
 | | Role | What it does |
 |---|---|---|
 | **`/reflect`** | distiller | Reads new transcripts since the last run, stages proposed memories/skills/docs + a digest. **Queue-only** — never writes live. Nightly via cron, or on demand. |
-| **`/reflect-review`** | curator | Walks the queue; you accept, edit, or reject each item. Promotes the approved ones and regenerates the index. The **only** path from queue to live. |
+| **`/reflect-curate`** | curator | Walks the queue; you accept, edit, or reject each item. Promotes the approved ones and regenerates the index. The **only** path from queue to live. |
 | **retrieval hook** | recall | On every prompt, scores the store and injects the top-k relevant entries. Invisible — no command, nothing to remember. |
 
 ## What's inside
 
 **Skills** (symlinked into `~/.claude/skills/` on install)
 - **reflect** — the distiller (transcripts → staged proposals + digest)
-- **reflect-review** — the approval step (queue → store)
+- **reflect-curate** — the approval step (queue → store)
 
 **Engine**
 - **hooks/retrieve.py** — the `UserPromptSubmit` retrieval hook (stdlib-only, never blocks a prompt)
@@ -185,7 +185,7 @@ This repo — the engine (safe to share)
 reflect/
 ├── skills/
 │   ├── reflect/SKILL.md           the distiller
-│   └── reflect-review/SKILL.md    the approval step
+│   └── reflect-curate/SKILL.md    the approval step
 ├── hooks/retrieve.py              retrieval hook (stdlib only)
 ├── bin/run-nightly.sh             cron runner
 ├── scripts/validate.sh            conformance gate
@@ -199,7 +199,7 @@ reflect/
 ~/.claude/ — your data (never committed)
 ────────────────────────────────────────
 ~/.claude/
-├── skills/{reflect,reflect-review} → symlinks into this repo
+├── skills/{reflect,reflect-curate} → symlinks into this repo
 ├── settings.json                     retrieval hook registered here
 └── reflection/
     ├── config.json     generated from the template
@@ -222,7 +222,7 @@ reflect is self-verifying — two scripts define "correct", and CI runs both on 
 ```
 
 The README demo is reproducible: `python3 assets/make-cast.py` regenerates the cast, then `agg`
-renders it to `assets/reflect-review.gif`. See [CONTRIBUTING.md](CONTRIBUTING.md) to set up the
+renders it to `assets/demo.gif`. See [CONTRIBUTING.md](CONTRIBUTING.md) to set up the
 linters and pre-commit hooks, and [AGENTS.md](AGENTS.md) for the rules agents and humans follow when
 working on the repo.
 

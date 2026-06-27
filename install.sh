@@ -58,7 +58,7 @@ fi
 
 # 4. Skills — symlinked so `git pull` updates them live.
 #    Back up any pre-existing real dir (or stale link) before linking.
-for s in reflect reflect-review; do
+for s in reflect reflect-curate; do
   link="$SKILLS_DIR/$s"
   if [ -L "$link" ]; then
     rm -f "$link"
@@ -68,7 +68,7 @@ for s in reflect reflect-review; do
   fi
   ln -sfn "$REPO/skills/$s" "$link"
 done
-say "linked skills: reflect, reflect-review -> $SKILLS_DIR"
+say "linked skills: reflect, reflect-curate -> $SKILLS_DIR"
 
 # 5. Retrieval hook -> settings.json (merge, idempotent).
 chmod +x "$REPO/hooks/retrieve.py" "$REPO/bin/run-nightly.sh" 2>/dev/null || true
@@ -114,6 +114,6 @@ if [ "$WANT_CRON" -eq 1 ]; then
 fi
 
 echo "reflect: done."
-echo "  Run /reflect in a Claude Code session (or wait for cron), then /reflect-review to promote."
+echo "  Run /reflect in a Claude Code session (or wait for cron), then /reflect-curate to promote."
 [ "$WANT_HOOK" -eq 1 ] && echo "  Restart Claude Code sessions so the retrieval hook takes effect."
 exit 0

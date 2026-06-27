@@ -1,9 +1,9 @@
 ---
-name: reflect-review
-description: Use when reviewing the candidates /reflect staged and promoting the approved ones into the live knowledge store — the only path from queue to live. Run after /reflect, or whenever the queue holds unreviewed items.
+name: reflect-curate
+description: Use when curating the queue: reviewing the candidates /reflect staged and promoting the approved ones into the live knowledge store — the only path from queue to live. Run after /reflect, or whenever the queue holds unreviewed items.
 ---
 
-# Reflect-review — curate the queue
+# Reflect-curate — review & promote the queue
 
 ## Overview
 

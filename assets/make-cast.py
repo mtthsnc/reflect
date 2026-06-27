@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Generate assets/reflect-review.cast — an asciicast v2 recording of the full reflect
-loop: /reflect distills, /reflect-review promotes, and a later session shows the
+Generate assets/demo.cast — an asciicast v2 recording of the full reflect
+loop: /reflect distills, /reflect-curate promotes, and a later session shows the
 retrieval hook injecting the approved memory automatically.
 
 Illustrative, scripted demo (the real flow is interactive with Claude), but every
@@ -9,7 +9,7 @@ line mirrors the actual skill + hook output. Regenerate the gif:
 
     python3 assets/make-cast.py
     agg --theme monokai --font-size 15 --font-family "DejaVu Sans Mono" \
-        assets/reflect-review.cast assets/reflect-review.gif
+        assets/demo.cast assets/demo.gif
 """
 import json
 import os
@@ -51,11 +51,11 @@ typed(f"{CYN}>{R} ", "/reflect", dt=0.07, after=0.7)
 line("", 0.2)
 line(f"{DIM}Reading 4 new sessions since the last run…{R}", 1.0)
 line(f"  {GRN}▸{R} staged {B}3 memories{R} + {B}1 doc{R}  {DIM}· digest written{R}", 0.6)
-line(f"  {DIM}Nothing is live yet — run /reflect-review to approve.{R}", 1.2)
+line(f"  {DIM}Nothing is live yet — run /reflect-curate to approve.{R}", 1.2)
 line("", 0.3)
 
-# ── Scene 2 — /reflect-review: curate the queue ─────────────────────────────
-typed(f"{CYN}>{R} ", "/reflect-review", dt=0.06, after=0.7)
+# ── Scene 2 — /reflect-curate: curate the queue ─────────────────────────────
+typed(f"{CYN}>{R} ", "/reflect-curate", dt=0.06, after=0.7)
 line("", 0.2)
 line(f"{B}▸ Reflection queue{R}  {DIM}(3 memories · 1 doc){R}", 0.6)
 line("", 0.2)
@@ -101,7 +101,7 @@ line("design-token source of truth, then the lint rules that enforce it…", 2.0
 
 header = {"version": 2, "width": WIDTH, "height": HEIGHT,
          "env": {"TERM": "xterm-256color", "SHELL": "/bin/bash"}}
-dst = os.path.join(os.path.dirname(__file__), "reflect-review.cast")
+dst = os.path.join(os.path.dirname(__file__), "demo.cast")
 with open(dst, "w", encoding="utf-8") as f:
     f.write(json.dumps(header) + "\n")
     for e in events:

@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Use when distilling recent Claude Code session transcripts into proposed memories, skills, and docs — the nightly learning pass, or on demand. Stages candidates in a review queue only; approval is the separate /reflect-review step.
+description: Use when distilling recent Claude Code session transcripts into proposed memories, skills, and docs — the nightly learning pass, or on demand. Stages candidates in a review queue only; approval is the separate /reflect-curate step.
 ---
 
 # Reflect — the daily learning loop
@@ -13,7 +13,7 @@ durable, reusable knowledge — **as proposals only**. Nothing here goes live.
 You are the reflection engine for a continuous-learning system. Your job: turn raw session
 transcripts into durable, reusable knowledge — **as proposals only**. Nothing you produce here
 goes live. You stage candidates in a queue and write a digest; the human approves later via
-`/reflect-review`.
+`/reflect-curate`.
 
 Optimize for **signal over volume**. A run that proposes 2 sharp memories and 1 real skill beats
 one that dumps 15 vague notes. Junk that survives review pollutes every future session.
@@ -122,7 +122,7 @@ What was worked on in the processed sessions, and what this run improved in the 
 - <signals too weak to propose, worth watching if they recur>
 
 ## Review
-Run `/reflect-review` to approve or reject the N items above.
+Run `/reflect-curate` to approve or reject the N items above.
 ```
 
 ### 7. Advance the cursor (do this LAST, only after queue + digest are written)
@@ -136,10 +136,10 @@ Append a one-line summary to `~/.claude/reflection/logs/reflect.log`.
 
 ## Output to the user
 End with a terse summary: sessions processed, candidates proposed by type, and a pointer to run
-`/reflect-review`. Do not gush. If nothing new, say so in one line.
+`/reflect-curate`. Do not gush. If nothing new, say so in one line.
 
 ## Common mistakes
-- **Writing live.** This skill is queue-only. Promotion happens in `/reflect-review`, never here.
+- **Writing live.** This skill is queue-only. Promotion happens in `/reflect-curate`, never here.
 - **Volume over signal.** 15 vague notes is failure, not thoroughness. Junk that survives review
   pollutes every future retrieval.
 - **Advancing the cursor early.** If the queue/digest write fails, the cursor must NOT move, or those

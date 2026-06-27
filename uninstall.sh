@@ -17,7 +17,7 @@ PURGE=0
 say() { printf '  %s\n' "$*"; }
 
 # Skills (only remove if they point at this repo).
-for s in reflect reflect-review; do
+for s in reflect reflect-curate; do
   link="$SKILLS_DIR/$s"
   if [ -L "$link" ] && [ "$(readlink -f "$link")" = "$REPO/skills/$s" ]; then
     rm -f "$link"; say "removed skill link $s"

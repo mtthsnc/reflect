@@ -21,14 +21,14 @@ All notable changes to reflect are documented here. Format follows
 - README restructured around a hero demo: tagline → animated loop → quickstart → how it works →
   anatomy of a memory → three-command table → reference. A table of contents, a narrative "How it
   works", a "What's inside" catalog, Philosophy, and mobile-robust layout diagrams.
-- Animated demo GIF showing the full loop end to end (`/reflect` distills → `/reflect-review`
+- Animated demo GIF showing the full loop end to end (`/reflect` distills → `/reflect-curate`
   promotes varied realistic candidates → a later session's retrieval injection), reproducible via
   `assets/make-cast.py` + `agg` (asciicast → GIF).
 
 ## [0.1.0] — initial
 
 ### Added
-- `/reflect` distiller and `/reflect-review` curator skills (propose-and-approve loop).
+- `/reflect` distiller and `/reflect-curate` curator skills (propose-and-approve loop).
 - `hooks/retrieve.py` pull-based UserPromptSubmit retrieval over a self-owned store.
 - `install.sh` / `uninstall.sh` (idempotent, engine/data split), `bin/run-nightly.sh` cron runner,
   `config.example.json`, README, and architecture docs.
