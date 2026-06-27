@@ -44,7 +44,7 @@ reflect/                      ← this repo (shareable)        ~/.claude/       
 Requires: Claude Code CLI on `PATH`, `python3`, `bash`.
 
 ```bash
-git clone <your-fork-url> reflect && cd reflect
+git clone https://github.com/mtthsnc/reflectr && cd reflectr
 ./install.sh --cron          # skills + data dirs + retrieval hook + nightly cron
 ```
 
