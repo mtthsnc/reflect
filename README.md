@@ -25,6 +25,7 @@ your own filesystem — never preloaded wholesale, never shipped to a server.
 - [The three commands](#the-three-commands)
 - [What's inside](#whats-inside)
 - [Why it scales](#why-it-scales)
+- [vs. Claude Code's built-in memory](#vs-claude-codes-built-in-memory)
 - [Install](#install) · [Configure](#configure) · [Uninstall](#uninstall)
 - [Retrieval internals](#retrieval-internals)
 - [Engine vs. data](#engine-vs-data) (your privacy)
@@ -128,6 +129,26 @@ The store is **pulled, not preloaded**. Older "load all memories every session" 
 always-on context tax and need constant pruning. reflect instead scores each prompt against every
 entry's `description` and injects only the top-k matches. The corpus can grow to thousands of entries
 while per-session cost stays flat — and there's no index to babysit.
+
+## vs. Claude Code's built-in memory
+
+Claude Code already remembers things on its own. reflect makes a different set of trade-offs — it
+buys **control and scale** at the cost of a little ritual:
+
+| | Built-in memory | reflect |
+|---|---|---|
+| **Retrieval** | Loads its index into *every* session — context cost grows with everything you've ever saved | Scores each prompt and injects only the top-k; the store can grow for years while per-session cost stays flat |
+| **What goes live** | Writes facts as it infers them — wrong guesses accumulate silently | A hard queue → approve gate; nothing lands without your explicit accept |
+| **Where it comes from** | Mostly what's salient mid-conversation | Distills whole past transcripts in batch, catching patterns you didn't flag in the moment |
+| **What it stores** | Facts | Typed memories, **skills**, and docs — each with provenance |
+| **Maintenance** | None — it just works | You run `/reflect-curate`; an unreviewed queue is dead weight |
+| **Recall** | Preloading everything never misses | Top-k scoring can miss an entry whose `description` lacks shared keywords |
+
+**The honest summary:** reflect trades automaticity for a human gate, bounded context, and
+transcript distillation. If you remember a *lot* across many projects and care about not letting
+wrong facts ossify, that trade is worth it. If you want memory to just work with no ritual, the
+built-in is the better fit. The whole edge hinges on retrieval quality — keep `description`s
+specific and keyword-rich, or the hook quietly under-recalls.
 
 ## Install
 
