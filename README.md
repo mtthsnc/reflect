@@ -1,4 +1,7 @@
-# reflect
+# reflectr
+
+[![CI](https://github.com/mtthsnc/reflectr/actions/workflows/ci.yml/badge.svg)](https://github.com/mtthsnc/reflectr/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A self-improving knowledge loop for [Claude Code](https://claude.com/claude-code). Every night it
 reads your session transcripts, distills them into **proposed** memories, skills, and docs, and
@@ -83,3 +86,16 @@ Edit `~/.claude/reflection/config.json` (generated from `config.example.json`):
 (4×) and `name` (2×) over its body (1×), and injects the top-k above `min_score`. It **never blocks
 a prompt** — any error exits silently. It's deliberately simple; swapping in embeddings is the
 natural upgrade if keyword recall starts missing synonyms. See `docs/ARCHITECTURE.md`.
+
+## Development
+
+reflectr is self-verifying — two scripts define "correct", and CI runs both on every push/PR:
+
+```bash
+./scripts/validate.sh   # conformance gate: shell + shellcheck + ruff + JSON + skill contract
+./tests/run.sh          # sandboxed install + retrieval-hook assertions
+```
+
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) (the rules
+agents and humans follow when working on the repo). The non-negotiables: no hardcoded paths, skill
+descriptions start with "Use when…", and the retrieval hook never blocks a prompt.

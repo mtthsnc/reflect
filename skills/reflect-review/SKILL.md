@@ -1,9 +1,14 @@
 ---
 name: reflect-review
-description: Review and approve/reject the candidates staged by /reflect. Shows queued memories, skills, and docs; on approval, promotes them to the live knowledge store (memories + docs + a regenerated INDEX) and the skills dir. Nothing from reflection goes live except through this step.
+description: Use when reviewing the candidates /reflect staged and promoting the approved ones into the live knowledge store — the only path from queue to live. Run after /reflect, or whenever the queue holds unreviewed items.
 ---
 
 # Reflect-review — curate the queue
+
+## Overview
+
+The curator half of the loop. Promote staged candidates into the live store — the **only** path
+from `queue/` → `store/`. The human decides; you present clearly and execute choices precisely.
 
 You promote staged reflection candidates into the live knowledge store. The human decides; you
 present clearly and execute their choices precisely. This is the only path from queue → live.
@@ -56,6 +61,15 @@ promoted/rejected and when.
 Summarize: what was promoted (with live paths), what was rejected, what remains queued. Confirm the
 INDEX was regenerated. Remind the user the retrieval hook will surface these in future prompts
 automatically — no per-session loading needed.
+
+## Common mistakes
+- **Promoting by default.** Only the items the user accepted in THIS review go live. Silence ≠ yes.
+- **Leaving reflection-only frontmatter in live files.** Strip `source_sessions`, `proposed`,
+  `action`, `target` — a live memory must match the standard contract exactly or it won't load.
+- **Creating a near-duplicate instead of updating.** For `action: update`, edit the target file.
+- **Forgetting the INDEX.** Regenerate `store_index` after promotions so the browse view stays true.
+- **Not clearing the queue.** Approved AND rejected items must be removed, or the next review
+  re-shows them.
 
 ## Guardrails
 - Only promote items the user accepted in THIS review.

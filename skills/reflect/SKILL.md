@@ -1,9 +1,14 @@
 ---
 name: reflect
-description: Reflection engine. Reads new Claude Code session transcripts since the last run, distills them into PROPOSED memories, skills, and docs (staged in a review queue, never written live), and writes a human-readable daily digest. Run manually any time, or let the nightly cron run it. Curation/approval is a separate step (/reflect-review).
+description: Use when distilling recent Claude Code session transcripts into proposed memories, skills, and docs — the nightly learning pass, or on demand. Stages candidates in a review queue only; approval is the separate /reflect-review step.
 ---
 
 # Reflect — the daily learning loop
+
+## Overview
+
+The distiller half of a propose-and-approve learning loop. Turn raw session transcripts into
+durable, reusable knowledge — **as proposals only**. Nothing here goes live.
 
 You are the reflection engine for a continuous-learning system. Your job: turn raw session
 transcripts into durable, reusable knowledge — **as proposals only**. Nothing you produce here
@@ -132,6 +137,16 @@ Append a one-line summary to `~/.claude/reflection/logs/reflect.log`.
 ## Output to the user
 End with a terse summary: sessions processed, candidates proposed by type, and a pointer to run
 `/reflect-review`. Do not gush. If nothing new, say so in one line.
+
+## Common mistakes
+- **Writing live.** This skill is queue-only. Promotion happens in `/reflect-review`, never here.
+- **Volume over signal.** 15 vague notes is failure, not thoroughness. Junk that survives review
+  pollutes every future retrieval.
+- **Advancing the cursor early.** If the queue/digest write fails, the cursor must NOT move, or those
+  sessions are lost forever.
+- **Re-proposing what already exists.** Dedup against the store first; sharpen via `action: update`.
+- **Weak `description` fields.** The retrieval hook scores prompts against `description` — a vague
+  one means the memory is never surfaced. Make it specific and keyword-rich.
 
 ## Guardrails
 - NEVER write to the live store (`memories_dir`/`docs_dir`), skills dir, or `store_index` from this
