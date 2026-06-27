@@ -1,0 +1,19 @@
+# reflect ships the ENGINE only. Personal data lives under ~/.claude/reflection/
+# (out of this repo) and must never be committed. These rules are a safety net in
+# case anyone points data dirs back into the repo.
+
+# Generated / personal data
+/store/
+/queue/
+/digests/
+/logs/
+/data/
+config.json          # the live, ~-expanded copy (config.example.json IS tracked)
+state.json
+
+# OS / editor noise
+.DS_Store
+*.swp
+*~
+__pycache__/
+*.pyc

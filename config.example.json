@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "description": "Config for the reflect learning loop. install.sh copies this to ~/.claude/reflection/config.json with ~ expanded. Edit the live copy to tune scope and thresholds.",
+  "scan": {
+    "projects_root": "~/.claude/projects",
+    "include_projects": ["*"],
+    "exclude_projects": [],
+    "min_session_bytes": 4000,
+    "lookback_hours_if_no_state": 48
+  },
+  "targets": {
+    "store_dir": "~/.claude/reflection/store",
+    "memories_dir": "~/.claude/reflection/store/memories",
+    "docs_dir": "~/.claude/reflection/store/docs",
+    "store_index": "~/.claude/reflection/store/INDEX.md",
+    "skills_dir": "~/.claude/skills",
+    "queue_dir": "~/.claude/reflection/queue"
+  },
+  "retrieval": {
+    "hook_enabled": true,
+    "top_k": 5,
+    "min_score": 2,
+    "max_chars_per_entry": 1200
+  },
+  "thresholds": {
+    "skill_min_repeat_count": 2,
+    "max_memory_candidates_per_run": 12,
+    "max_skill_candidates_per_run": 3,
+    "max_doc_candidates_per_run": 3
+  },
+  "autonomy": "propose-and-approve"
+}
