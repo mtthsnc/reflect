@@ -18,6 +18,9 @@ All notable changes to reflectr are documented here. Format follows
 ### Changed
 - Skill descriptions rewritten as "Use when…" triggers (not workflow summaries) so agents read the
   skill body instead of the description. Added Overview and Common-mistakes sections to both skills.
+- README overhauled: newcomer-first ordering (tagline → quickstart → how it works → worked example),
+  a table of contents, a narrative "How it works", a "What's inside" catalog, Philosophy, and
+  mobile-robust layout diagrams. Fixed the stale `reflect/` repo name.
 
 ## [0.1.0] — initial
 
