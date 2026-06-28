@@ -20,7 +20,8 @@
     "hook_enabled": true,
     "top_k": 5,
     "min_score": 2,
-    "max_chars_per_entry": 1200
+    "max_chars_per_entry": 1200,
+    "reinject_after_turns": 20
   },
   "thresholds": {
     "skill_min_repeat_count": 2,

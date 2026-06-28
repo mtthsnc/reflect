@@ -195,9 +195,11 @@ Edit `~/.claude/reflection/config.json` (generated from `config.example.json`):
 
 `hooks/retrieve.py` is stdlib-only keyword overlap: it weights matches in an entry's `description`
 (4×) and `name` (2×) over its body (1×) and injects the top-k above `min_score`. It **never blocks a
-prompt** — any error path exits silently with no output. It's deliberately simple; swapping in
-embedding similarity is the natural upgrade if keyword recall starts missing synonyms. Full design in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+prompt** — any error path exits silently with no output. Because the hook fires on every prompt, it
+**dedups per session**: an entry's full body is injected once, then repeat keyword hits get a
+one-line pointer (until a recency-refresh window), so context doesn't bloat when you keep hitting the
+same topic. It's deliberately simple; swapping in embedding similarity is the natural upgrade if
+keyword recall starts missing synonyms. Full design in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Engine vs. data
 

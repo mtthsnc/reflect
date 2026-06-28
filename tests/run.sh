@@ -61,6 +61,17 @@ printf 'not json at all' | HOME="$FH" python3 "$REPO/hooks/retrieve.py" >/dev/nu
 miss="$(printf '{"prompt":"completely orthogonal kangaroo xylophone"}' | HOME="$FH" python3 "$REPO/hooks/retrieve.py")"
 [ -z "$miss" ] && ok "no output when nothing matches" || bad "emitted output with no match"
 
+echo "== session-aware dedup =="
+DP='{"prompt":"frontend conventions and conformance gates for our design tokens","session_id":"sess1"}'
+first="$(printf '%s' "$DP" | HOME="$FH" python3 "$REPO/hooks/retrieve.py")"
+echo "$first" | grep -q "Body about design tokens" && ok "first prompt injects full body" || bad "first prompt missing full body"
+second="$(printf '%s' "$DP" | HOME="$FH" python3 "$REPO/hooks/retrieve.py")"
+echo "$second" | grep -q "already loaded earlier this session" && ok "repeat prompt emits pointer" || bad "repeat prompt missing pointer"
+echo "$second" | grep -q "Body about design tokens" && bad "repeat prompt re-injected full body" || ok "repeat prompt suppresses full body"
+# A different session must still get the full body (cache is per-session).
+other="$(printf '{"prompt":"design tokens conformance gates","session_id":"sess2"}' | HOME="$FH" python3 "$REPO/hooks/retrieve.py")"
+echo "$other" | grep -q "Body about design tokens" && ok "fresh session injects full body" || bad "fresh session missing full body"
+
 echo
 if [ "$fail" -ne 0 ]; then
   echo "TESTS: FAIL"

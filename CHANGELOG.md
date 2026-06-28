@@ -7,6 +7,11 @@ All notable changes to reflect are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+- Session-aware retrieval dedup (`hooks/retrieve.py`): the hook fires on every prompt, so a recurring
+  keyword used to re-inject the same full entry each turn. It now caches injected entry names per
+  `session_id` (`reflection/cache/<session_id>.json`) and emits a one-line pointer for repeats,
+  re-injecting in full only after `retrieval.reinject_after_turns` (default 20). Best-effort: any
+  cache error falls back to full injection; stale caches are pruned after a week.
 - `SessionEnd` hook (`hooks/on_session_end.py`): event-driven trigger that runs `/reflect-stage` at real
   session boundaries (`/clear`, logout, end of `-p` input), so distillation is tied to when sessions
   actually end rather than a fixed clock schedule. Recursion-safe via a `REFLECT_RUNNING` sentinel,

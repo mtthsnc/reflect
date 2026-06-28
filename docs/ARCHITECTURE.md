@@ -22,7 +22,10 @@ pruning/compaction to stay bounded.
 `reflect` inverts it. Nothing is preloaded except a constant-size pointer (the registered hook). At
 prompt time the hook retrieves the **top-k** relevant entries and injects only those. Consequences:
 
-- Per-session context cost is **flat** regardless of store size.
+- Per-prompt context cost is **flat** regardless of store size (only the top-k is ever injected).
+- Repeated matches across a session are **deduped**: an entry's full body is injected once, then
+  repeat hits emit a one-line pointer until a recency-refresh window elapses — so cost does not grow
+  linearly with the number of prompts that happen to match the same entry (see Retrieval scoring).
 - The store can grow without compaction — growth no longer touches session context.
 - The supervision burden shifts from "prune the index" to "occasionally check retrieval quality,"
   which is smaller and degrades gracefully (a miss = a forgotten fact, not a broken session).
@@ -39,6 +42,11 @@ prompt time the hook retrieves the **top-k** relevant entries and injects only t
    `4·|q ∩ description| + 2·|q ∩ name| + 1·|q ∩ body|`.
 4. Emit entries scoring ≥ `min_score`, top `top_k`, each truncated to `max_chars_per_entry`,
    wrapped in a `<reflect-memory>` block.
+5. Dedup against this session's cache (`reflection/cache/<session_id>.json`, keyed by the
+   `session_id` in the payload): an entry already injected this session emits a one-line pointer
+   instead of its body, unless it hasn't appeared in the last `reinject_after_turns` turns (recency
+   refresh). Best-effort — any cache error falls back to full injection. Caches older than a week
+   are pruned opportunistically.
 
 The `description` field is the relevance key, so `/reflect-stage` and `/reflect` are told to keep
 it specific and keyword-rich. **Upgrade path:** replace step 3 with embedding cosine similarity
