@@ -7,6 +7,11 @@ All notable changes to reflect are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+- `SessionEnd` hook (`hooks/on_session_end.py`): event-driven trigger that runs `/reflect` at real
+  session boundaries (`/clear`, logout, end of `-p` input), so distillation is tied to when sessions
+  actually end rather than a fixed clock schedule. Recursion-safe via a `REFLECT_RUNNING` sentinel,
+  size-gated (skips trivial sessions), runs detached on a small model (`REFLECT_MODEL`, default
+  `claude-haiku-4-5`). Wired idempotently by `install.sh`.
 - README "vs. Claude Code's built-in memory" section: an accurate head-to-head with Claude Code's
   auto memory (which is itself bounded — `MEMORY.md` index + on-demand topic files), framing
   reflect's real differences as the approval gate, deterministic per-prompt injection, transcript
@@ -29,10 +34,16 @@ All notable changes to reflect are documented here. Format follows
   promotes varied realistic candidates → a later session's retrieval injection), reproducible via
   `assets/make-cast.py` + `agg` (asciicast → GIF).
 
+### Removed
+- Nightly cron and `bin/run-nightly.sh`, and the `--cron` install flag. The `SessionEnd` hook
+  replaces them — distillation now runs when a session ends rather than at a fixed hour, which also
+  fixes the failure mode where the scheduled run never fired on a sleeping/closed machine.
+  `install.sh` removes any stale reflect cron entry on upgrade.
+
 ## [0.1.0] — initial
 
 ### Added
 - `/reflect` distiller and `/reflect-curate` curator skills (propose-and-approve loop).
 - `hooks/retrieve.py` pull-based UserPromptSubmit retrieval over a self-owned store.
-- `install.sh` / `uninstall.sh` (idempotent, engine/data split), `bin/run-nightly.sh` cron runner,
-  `config.example.json`, README, and architecture docs.
+- `install.sh` / `uninstall.sh` (idempotent, engine/data split),
+  `hooks/on_session_end.py` SessionEnd trigger, `config.example.json`, README, and architecture docs.

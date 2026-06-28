@@ -28,7 +28,7 @@ queue contents, logs, or a generated `config.json`.
 ```
 skills/<name>/SKILL.md   skills (symlinked into ~/.claude/skills on install)
 hooks/retrieve.py        UserPromptSubmit retrieval hook (stdlib only)
-bin/run-nightly.sh       cron runner (resolves claude via command -v)
+hooks/on_session_end.py  SessionEnd trigger (runs /reflect headless on session end)
 scripts/validate.sh      conformance gate (syntax, lint, JSON, skill contract)
 tests/run.sh             sandbox install + retrieval assertions
 config.example.json      config template (install expands ~ to $HOME)
@@ -42,7 +42,7 @@ install.sh uninstall.sh  idempotent wiring into ~/.claude
   Overview → procedure → Common mistakes → Guardrails. Run `./scripts/validate.sh`.
 - **Change retrieval:** edit `hooks/retrieve.py`, then `./tests/run.sh` (it asserts relevant hits,
   irrelevant misses, and safe handling of empty/malformed input). Keep it dependency-free.
-- **Change install/cron:** keep `install.sh` idempotent and re-run-safe; `./tests/run.sh` covers it.
+- **Change install/hooks:** keep `install.sh` idempotent and re-run-safe; `./tests/run.sh` covers it.
 
 ## Local setup
 

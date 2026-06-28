@@ -2,7 +2,7 @@
 # reflect — uninstaller. Removes the wiring; keeps your data by default.
 #
 # Usage:
-#   ./uninstall.sh           # remove skills symlinks, hook, cron (data kept)
+#   ./uninstall.sh           # remove skills symlinks, hooks (data kept)
 #   ./uninstall.sh --purge   # ALSO delete ~/.claude/reflection (your memories!)
 set -euo pipefail
 
@@ -24,32 +24,44 @@ for s in reflect reflect-curate; do
   fi
 done
 
-# Hook out of settings.json.
+# Hooks out of settings.json (retrieval + session-end).
 if [ -f "$SETTINGS" ]; then
-  python3 - "$SETTINGS" "$REPO/hooks/retrieve.py" <<'PY'
+  python3 - "$SETTINGS" \
+    "UserPromptSubmit:$REPO/hooks/retrieve.py" \
+    "SessionEnd:$REPO/hooks/on_session_end.py" <<'PY'
 import json, sys
-p, cmd = sys.argv[1], sys.argv[2]
+p = sys.argv[1]
+pairs = [a.split(":", 1) for a in sys.argv[2:]]
 try:
     with open(p) as f: data = json.load(f)
 except Exception:
     sys.exit(0)
-ups = data.get("hooks", {}).get("UserPromptSubmit", [])
-for group in ups:
-    if isinstance(group, dict):
-        group["hooks"] = [h for h in group.get("hooks", []) if h.get("command") != cmd]
-data.get("hooks", {})["UserPromptSubmit"] = [g for g in ups if g.get("hooks")]
-if not data.get("hooks", {}).get("UserPromptSubmit"):
-    data.get("hooks", {}).pop("UserPromptSubmit", None)
+hooks = data.get("hooks", {})
+removed = []
+for event, cmd in pairs:
+    groups = hooks.get(event, [])
+    before = sum(len(g.get("hooks", [])) for g in groups if isinstance(g, dict))
+    for group in groups:
+        if isinstance(group, dict):
+            group["hooks"] = [h for h in group.get("hooks", []) if h.get("command") != cmd]
+    if sum(len(g.get("hooks", [])) for g in groups if isinstance(g, dict)) < before:
+        removed.append(event)
+    remaining = [g for g in groups if isinstance(g, dict) and g.get("hooks")]
+    if remaining:
+        hooks[event] = remaining
+    else:
+        hooks.pop(event, None)
 with open(p, "w") as f:
     json.dump(data, f, indent=2); f.write("\n")
-print("  removed retrieval hook from settings.json")
+if removed:
+    print("  removed hooks from settings.json:", ", ".join(removed))
 PY
 fi
 
-# Cron.
-if crontab -l 2>/dev/null | grep -Fq "$REPO/bin/run-nightly.sh"; then
-  crontab -l 2>/dev/null | grep -Fv "$REPO/bin/run-nightly.sh" | crontab -
-  say "removed cron entry"
+# Stale cron from older installs (the SessionEnd hook replaced the nightly runner).
+if crontab -l 2>/dev/null | grep -Fq "/bin/run-nightly.sh"; then
+  { crontab -l 2>/dev/null | grep -Fv "/bin/run-nightly.sh" | crontab -; } || true
+  say "removed stale nightly cron entry"
 fi
 
 if [ "$PURGE" -eq 1 ]; then

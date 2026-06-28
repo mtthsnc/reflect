@@ -3,9 +3,9 @@
 ## The loop
 
 1. **Capture** — Claude Code writes every session to `~/.claude/projects/<project>/*.jsonl`.
-2. **Distill** (`/reflect`, nightly via cron) — reads transcripts newer than the cursor in
-   `state.json`, extracts durable signal, and stages **proposals** in `queue/`. Writes a daily
-   digest. Never touches the live store. Advances the cursor last.
+2. **Distill** (`/reflect`, on session end via the SessionEnd hook, or on demand) — reads
+   transcripts newer than the cursor in `state.json`, extracts durable signal, and stages
+   **proposals** in `queue/`. Writes a digest. Never touches the live store. Advances the cursor last.
 3. **Curate** (`/reflect-curate`, human-in-the-loop) — the only path from `queue/` → `store/`.
    Promotes approved memories/docs into the store, regenerates `INDEX.md`, clears the queue.
 4. **Retrieve** (`hooks/retrieve.py`, every prompt) — scores the prompt against the store and
@@ -53,9 +53,10 @@ No file in the repo hardcodes a user, home path, or project name.
 
 - Paths default to `~/.claude/...`, which resolves per user.
 - `install.sh` generates `config.json` from the template with `$HOME` expanded, symlinks the skills
-  into `~/.claude/skills/` (so `git pull` updates them), merges the hook into `settings.json`
-  idempotently, and optionally installs cron.
-- `run-nightly.sh` resolves the `claude` binary via `command -v` with fallbacks.
+  into `~/.claude/skills/` (so `git pull` updates them), and merges both hooks (retrieval +
+  SessionEnd) into `settings.json` idempotently.
+- `on_session_end.py` resolves the `claude` binary via `shutil.which` with the same fallbacks, and is
+  recursion-guarded (the `/reflect` run it spawns carries `REFLECT_RUNNING` so its own SessionEnd is a no-op).
 - The self-owned `store/` means there are **no** project-specific memory paths — the system is
   identical for every colleague who installs it.
 
@@ -66,7 +67,7 @@ No file in the repo hardcodes a user, home path, or project name.
 | `skills/reflect/SKILL.md` | distiller (queue-only) | yes |
 | `skills/reflect-curate/SKILL.md` | curator (queue → store) | yes |
 | `hooks/retrieve.py` | retrieval hook | yes |
-| `bin/run-nightly.sh` | cron runner | yes |
+| `hooks/on_session_end.py` | SessionEnd trigger (runs /reflect headless) | yes |
 | `config.example.json` | config template | yes |
 | `~/.claude/reflection/config.json` | live config | no (generated) |
 | `~/.claude/reflection/state.json` | cursor | no |

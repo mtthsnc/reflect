@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Use when distilling recent Claude Code session transcripts into proposed memories, skills, and docs — the nightly learning pass, or on demand. Stages candidates in a review queue only; approval is the separate /reflect-curate step.
+description: Use when distilling recent Claude Code session transcripts into proposed memories, skills, and docs — the end-of-session or on-demand learning pass. Stages candidates in a review queue only; approval is the separate /reflect-curate step.
 ---
 
 # Reflect — the daily learning loop

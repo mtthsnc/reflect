@@ -26,7 +26,9 @@ else
 fi
 
 echo "== python =="
-if python3 -m py_compile hooks/retrieve.py; then ok "py_compile hooks/retrieve.py"; else bad "py_compile failed"; fi
+for f in hooks/*.py; do
+  if python3 -m py_compile "$f"; then ok "py_compile $f"; else bad "py_compile failed: $f"; fi
+done
 if command -v ruff >/dev/null 2>&1; then
   if ruff check hooks/; then ok "ruff hooks/"; else bad "ruff findings"; fi
 else

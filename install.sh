@@ -4,9 +4,8 @@
 # into the repo; everything you generate lives under ~/.claude/reflection/.
 #
 # Usage:
-#   ./install.sh              # skills + data dirs + retrieval hook
-#   ./install.sh --cron       # also install the nightly cron job
-#   ./install.sh --no-hook    # skip the UserPromptSubmit retrieval hook
+#   ./install.sh              # skills + data dirs + retrieval & session-end hooks
+#   ./install.sh --no-hook    # skip the hooks (retrieval + session-end)
 #   ./install.sh --force      # overwrite an existing config.json with the template
 set -euo pipefail
 
@@ -16,10 +15,9 @@ REFLECT_HOME="$CLAUDE_HOME/reflection"
 SKILLS_DIR="$CLAUDE_HOME/skills"
 SETTINGS="$CLAUDE_HOME/settings.json"
 
-WANT_CRON=0; WANT_HOOK=1; FORCE=0
+WANT_HOOK=1; FORCE=0
 for arg in "$@"; do
   case "$arg" in
-    --cron) WANT_CRON=1 ;;
     --no-hook) WANT_HOOK=0 ;;
     --force) FORCE=1 ;;
     -h|--help) grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -49,7 +47,7 @@ else
   say "wrote $CONFIG"
 fi
 
-# 3. state.json — cursor for the nightly engine.
+# 3. state.json — cursor for the engine.
 STATE="$REFLECT_HOME/state.json"
 if [ ! -f "$STATE" ]; then
   printf '%s\n' '{ "last_run_iso": null, "last_processed_mtime": 0, "processed_sessions": [], "runs": [] }' > "$STATE"
@@ -70,50 +68,53 @@ for s in reflect reflect-curate; do
 done
 say "linked skills: reflect, reflect-curate -> $SKILLS_DIR"
 
-# 5. Retrieval hook -> settings.json (merge, idempotent).
-chmod +x "$REPO/hooks/retrieve.py" "$REPO/bin/run-nightly.sh" 2>/dev/null || true
+# 5. Hooks -> settings.json (merge, idempotent).
+#    UserPromptSubmit retrieval (pull) + SessionEnd reflect trigger (push on /clear & exit).
+chmod +x "$REPO/hooks/retrieve.py" "$REPO/hooks/on_session_end.py" 2>/dev/null || true
 if [ "$WANT_HOOK" -eq 1 ]; then
-  HOOK_CMD="$REPO/hooks/retrieve.py"
-  python3 - "$SETTINGS" "$HOOK_CMD" <<'PY'
+  python3 - "$SETTINGS" \
+    "UserPromptSubmit:$REPO/hooks/retrieve.py" \
+    "SessionEnd:$REPO/hooks/on_session_end.py" <<'PY'
 import json, os, sys
-settings_path, hook_cmd = sys.argv[1], sys.argv[2]
+settings_path = sys.argv[1]
+pairs = [a.split(":", 1) for a in sys.argv[2:]]
 try:
     with open(settings_path) as f: data = json.load(f)
 except Exception:
     data = {}
 hooks = data.setdefault("hooks", {})
-ups = hooks.setdefault("UserPromptSubmit", [])
-exists = any(
-    h.get("command") == hook_cmd
-    for group in ups if isinstance(group, dict)
-    for h in group.get("hooks", []) if isinstance(h, dict)
-)
-if not exists:
-    ups.append({"hooks": [{"type": "command", "command": hook_cmd}]})
+for event, cmd in pairs:
+    groups = hooks.setdefault(event, [])
+    exists = any(
+        h.get("command") == cmd
+        for group in groups if isinstance(group, dict)
+        for h in group.get("hooks", []) if isinstance(h, dict)
+    )
+    if exists:
+        print(f"  {event} hook already present")
+        continue
+    entry = {"type": "command", "command": cmd}
+    if event == "SessionEnd":
+        entry["async"] = True  # detached; never delays exit
+    groups.append({"hooks": [entry]})
+    print(f"  registered {event} hook: {cmd}")
 os.makedirs(os.path.dirname(settings_path), exist_ok=True)
 with open(settings_path, "w") as f:
     json.dump(data, f, indent=2)
     f.write("\n")
-print("  retrieval hook registered in", settings_path)
 PY
 else
-  say "skipped retrieval hook (--no-hook)"
+  say "skipped hooks (--no-hook)"
 fi
 
-# 6. Optional nightly cron.
-if [ "$WANT_CRON" -eq 1 ]; then
-  RUNNER="$REPO/bin/run-nightly.sh"
-  LINE="30 2 * * * $RUNNER"
-  current="$(crontab -l 2>/dev/null || true)"
-  if printf '%s\n' "$current" | grep -Fq "$RUNNER"; then
-    say "cron already present"
-  else
-    printf '%s\n%s\n' "$current" "$LINE" | grep -v '^$' | crontab -
-    say "installed cron: $LINE"
-  fi
+# 6. Migration: older installs wired a 02:30 cron runner. The SessionEnd hook
+#    replaces it — drop any stale entry so it doesn't fire a now-removed script.
+if crontab -l 2>/dev/null | grep -Fq "/bin/run-nightly.sh"; then
+  { crontab -l 2>/dev/null | grep -Fv "/bin/run-nightly.sh" | crontab -; } || true
+  say "removed stale nightly cron (replaced by the SessionEnd hook)"
 fi
 
 echo "reflect: done."
-echo "  Run /reflect in a Claude Code session (or wait for cron), then /reflect-curate to promote."
-[ "$WANT_HOOK" -eq 1 ] && echo "  Restart Claude Code sessions so the retrieval hook takes effect."
+echo "  Reflect runs when a session ends (/clear or exit), or run /reflect on demand. Then /reflect-curate to promote."
+[ "$WANT_HOOK" -eq 1 ] && echo "  Restart Claude Code sessions so the hooks take effect."
 exit 0

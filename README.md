@@ -37,16 +37,16 @@ Requires the Claude Code CLI on your `PATH`, plus `python3` and `bash`.
 
 ```bash
 git clone https://github.com/mtthsnc/reflect && cd reflect
-./install.sh --cron     # skills + data dirs + retrieval hook + nightly job
+./install.sh     # skills + data dirs + retrieval & session-end hooks
 ```
 
-Restart any open Claude Code sessions so the hook loads. That's it — reflect now runs nightly and
-retrieves on its own. Run `/reflect` any time to distill immediately, and `/reflect-curate` to
-approve what it found.
+Restart any open Claude Code sessions so the hooks load. That's it — reflect now distills
+automatically when a session ends (`/clear` or exit) and retrieves on its own. Run `/reflect` any
+time to distill immediately, and `/reflect-curate` to approve what it found.
 
 ## How it works
 
-It starts the moment you stop for the day. While you're away (or whenever you run `/reflect`),
+It starts the moment a session ends. When you `/clear` or exit (or whenever you run `/reflect`),
 reflect reads back over your recent Claude Code sessions — not the raw tool-noise, but what actually
 happened: what you were trying to do, where things went sideways, the preferences and decisions worth
 remembering. It writes those up as **proposals** and sets them aside with a short digest. Nothing has
@@ -61,8 +61,8 @@ never the whole pile. The store can grow for years while what Claude sees each t
 
 ```
  sessions  ──/reflect──▶  queue  ──/reflect-curate──▶  store  ──retrieval hook──▶  future
- (.jsonl)    distill,      (you      promote          (memories   top-k injected     prompts
-             nightly       approve)                    + docs)     per prompt
+ (.jsonl)    distill on    (you      promote          (memories   top-k injected     prompts
+             session-end   approve)                    + docs)     per prompt
              or on demand)
 ```
 
@@ -102,7 +102,7 @@ You didn't load anything. You didn't even remember the memory existed. It was si
 
 | | Role | What it does |
 |---|---|---|
-| **`/reflect`** | distiller | Reads new transcripts since the last run, stages proposed memories/skills/docs + a digest. **Queue-only** — never writes live. Nightly via cron, or on demand. |
+| **`/reflect`** | distiller | Reads new transcripts since the last run, stages proposed memories/skills/docs + a digest. **Queue-only** — never writes live. On session end (`/clear` or exit), or on demand. |
 | **`/reflect-curate`** | curator | Walks the queue; you accept, edit, or reject each item. Promotes the approved ones and regenerates the index. The **only** path from queue to live. |
 | **retrieval hook** | recall | On every prompt, scores the store and injects the top-k relevant entries. Invisible — no command, nothing to remember. |
 
@@ -114,7 +114,7 @@ You didn't load anything. You didn't even remember the memory existed. It was si
 
 **Engine**
 - **hooks/retrieve.py** — the `UserPromptSubmit` retrieval hook (stdlib-only, never blocks a prompt)
-- **bin/run-nightly.sh** — the cron runner (resolves the `claude` binary at runtime)
+- **hooks/on_session_end.py** — the `SessionEnd` hook (runs `/reflect` headless on session end)
 - **install.sh / uninstall.sh** — idempotent wiring into `~/.claude/`
 - **config.example.json** — the config template
 
@@ -141,7 +141,7 @@ curates*, *how recall is triggered*, and *what's stored*:
 | | Auto memory | reflect |
 |---|---|---|
 | **Who writes it** | Claude, automatically — it decides what's worth saving | Claude proposes; **you approve** each item in `/reflect-curate` |
-| **When captured** | Mid-session, from your corrections and preferences | Batch pass over whole past transcripts (nightly or on demand) |
+| **When captured** | Mid-session, from your corrections and preferences | Batch pass over whole past transcripts (on session end or on demand) |
 | **Always-on context** | The `MEMORY.md` index — first 200 lines / 25 KB, every session | None — nothing loads until a prompt matches |
 | **Recall** | Index is preloaded; Claude opens topic files on demand when it judges them relevant | A hook keyword-scores every entry per prompt and injects the top-k, regardless of what the model decides |
 | **Scope** | Per git repository, machine-local | One store across all your projects |
@@ -161,20 +161,19 @@ better fit. reflect trades that effort for control, cross-project recall, and sk
 
 ```bash
 git clone https://github.com/mtthsnc/reflect && cd reflect
-./install.sh --cron
+./install.sh
 ```
 
 Flags:
 
 | Flag | Effect |
 |---|---|
-| *(none)* | skills + data dirs + retrieval hook |
-| `--cron` | also install the 02:30 nightly job |
-| `--no-hook` | skip the retrieval hook |
+| *(none)* | skills + data dirs + retrieval & session-end hooks |
+| `--no-hook` | skip both hooks |
 | `--force` | overwrite an existing `config.json` with the template |
 
 It's idempotent — re-run any time. `git pull && ./install.sh` updates everything in place (skills are
-symlinked, so they update on pull). Restart open Claude Code sessions afterward so the hook loads.
+symlinked, so they update on pull). Restart open Claude Code sessions afterward so the hooks load.
 
 ## Configure
 
@@ -188,7 +187,7 @@ Edit `~/.claude/reflection/config.json` (generated from `config.example.json`):
 ## Uninstall
 
 ```bash
-./uninstall.sh            # removes skills links, hook, cron — keeps your data
+./uninstall.sh            # removes skills links and both hooks — keeps your data
 ./uninstall.sh --purge    # also deletes ~/.claude/reflection (your memories!)
 ```
 
@@ -215,7 +214,7 @@ reflect/
 │   ├── reflect/SKILL.md           the distiller
 │   └── reflect-curate/SKILL.md    the approval step
 ├── hooks/retrieve.py              retrieval hook (stdlib only)
-├── bin/run-nightly.sh             cron runner
+├── hooks/on_session_end.py        SessionEnd trigger (runs /reflect headless)
 ├── scripts/validate.sh            conformance gate
 ├── tests/run.sh                   test suite
 ├── config.example.json            config template
@@ -228,7 +227,7 @@ reflect/
 ────────────────────────────────────────
 ~/.claude/
 ├── skills/{reflect,reflect-curate} → symlinks into this repo
-├── settings.json                     retrieval hook registered here
+├── settings.json                     both hooks registered here
 └── reflection/
     ├── config.json     generated from the template
     ├── state.json      cursor — which sessions are processed
