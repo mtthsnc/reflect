@@ -37,6 +37,7 @@ STOPWORDS = {
 
 HOME = os.path.expanduser("~")
 CONFIG_PATH = os.path.join(HOME, ".claude", "reflection", "config.json")
+GRAPH_DB = os.path.join(HOME, ".claude", "reflection", "store", "graph.sqlite")
 CACHE_MAX_AGE_S = 7 * 24 * 3600  # prune per-session caches older than a week
 
 
@@ -117,6 +118,40 @@ def save_cache(cache_path, cache_dir, turn, injected):
         pass
 
 
+def expand_with_graph(gcfg, scored, top_k, min_score):
+    if not gcfg.get("enabled", False):
+        return scored
+    if not os.path.exists(GRAPH_DB):
+        return scored
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import graph_store as gs
+        conn = gs.connect(GRAPH_DB)
+        depth = int(gcfg.get("expand_depth", 1))
+        floor = float(gcfg.get("min_confidence", 0.0))
+        seed_paths = {row[4] for row in scored}
+        seed_nodes = set()
+        for p in seed_paths:
+            seed_nodes |= gs.nodes_for_path(conn, p)
+        neigh = set()
+        for nid in seed_nodes:
+            neigh |= gs.neighbors(conn, nid, depth=depth, min_confidence=floor)
+        extra_paths = gs.provenance_for_nodes(conn, neigh) - seed_paths
+        out = list(scored)
+        have = {row[4] for row in scored}
+        for path in extra_paths:
+            if path in have:
+                continue
+            parsed = parse_entry(path)
+            if not parsed:
+                continue
+            name, desc, body = parsed
+            out.append((min_score, name, desc, body, path))
+        return out
+    except Exception:
+        return scored
+
+
 def main():
     try:
         stdin = sys.stdin.read()
@@ -173,6 +208,7 @@ def main():
 
     if not scored:
         return
+    scored = expand_with_graph(cfg.get("graph", {}), scored, top_k, min_score)
     scored.sort(key=lambda x: x[0], reverse=True)
     top = scored[:top_k]
 

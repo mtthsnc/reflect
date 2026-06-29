@@ -37,6 +37,14 @@ REFLECT_REASONS = {"clear", "logout", "prompt_input_exit", "other"}
 if event.get("reason") not in REFLECT_REASONS:
     sys.exit(0)
 
+graphify_sync = os.path.join(os.path.dirname(os.path.abspath(__file__)), "graphify_sync.py")
+try:
+    subprocess.Popen(["python3", graphify_sync],
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)
+except Exception:
+    pass
+
 HOME = os.path.expanduser("~")
 CLAUDE_HOME = os.environ.get("CLAUDE_HOME") or os.path.join(HOME, ".claude")
 REFLECT_HOME = os.path.join(CLAUDE_HOME, "reflection")
