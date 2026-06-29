@@ -141,6 +141,15 @@ def provenance_for_nodes(conn, node_ids):
     return out
 
 
+def all_names(conn):
+    names = set()
+    for row in conn.execute("SELECT canonical_name, aliases FROM nodes"):
+        names.add(row["canonical_name"])
+        for a in _load_list(row["aliases"]):
+            names.add(a)
+    return names
+
+
 def forget_path(conn, path):
     for row in conn.execute("SELECT id, provenance FROM nodes").fetchall():
         prov = _load_list(row["provenance"])

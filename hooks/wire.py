@@ -4,66 +4,111 @@ import sys
 
 import graph_store as gs
 
-CUES = {
-    "works_at": [r"works? at", r"employed (?:at|by)"],
-    "invested_in": [r"invested in", r"investor in"],
-    "founded": [r"co-?founded", r"founded"],
-    "advises": [r"advises?", r"advisor (?:to|of)"],
-    "attended": [r"attended"],
+CANON = {
+    "works_at": ["works at", "employed at", "employed by"],
+    "founded": ["founded", "cofounded", "co founded"],
+    "invested_in": ["invested in", "investor in"],
+    "acquired": ["acquired", "bought"],
+    "partners_with": ["partners with", "partnered with"],
+    "advises": ["advises", "advisor to", "advisor of"],
+    "depends_on": ["depends on", "requires", "needs"],
+    "built_with": ["built with", "written in", "based on", "uses"],
+    "part_of": ["part of", "belongs to", "lives in"],
+    "fork_of": ["fork of", "forked from"],
+    "configured_by": ["configured by", "pinned to", "set in"],
+    "supersedes": ["replaces", "supersedes", "migrated from"],
+    "conflicts_with": ["conflicts with", "incompatible with"],
+    "fixes": ["fixes", "fixed by", "workaround for"],
+    "owned_by": ["owned by", "maintained by"],
+    "standard_for": ["standard for", "convention for"],
 }
 
+STOP = {"the", "a", "an", "and", "also", "then", "is", "was", "are", "were",
+        "be", "been", "that", "this", "it", "its", "as", "our", "their"}
+
 _WIKILINK = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]*)?\]\]")
-_SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
+_CODE = re.compile(r"`([^`\n]+)`")
+_SENT_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 
 
-def extract_entities(text):
-    out = []
-    for m in _WIKILINK.finditer(text or ""):
+def _norm_words(span):
+    words = re.findall(r"[a-z][a-z0-9+-]*", span.lower())
+    return [w for w in words if w not in STOP]
+
+
+def _build_canon():
+    table = {}
+    for canon, variants in CANON.items():
+        for v in variants:
+            key = " ".join(_norm_words(v))
+            if key:
+                table[key] = canon
+    return table
+
+
+_CANON_BY_PHRASE = _build_canon()
+
+
+def _relation(span):
+    words = _norm_words(span)
+    if not words:
+        return None
+    phrase = " ".join(words)
+    if phrase in _CANON_BY_PHRASE:
+        return _CANON_BY_PHRASE[phrase]
+    return "_".join(words[:3])
+
+
+def _mentions(text, known):
+    spans = []
+    for m in _WIKILINK.finditer(text):
         name = m.group(1).strip()
-        if name and name not in out:
+        if name:
+            spans.append((name, m.start(), m.end()))
+    for m in _CODE.finditer(text):
+        tok = m.group(1).strip()
+        if tok and " " not in tok:
+            spans.append((tok, m.start(), m.end()))
+    for name in known:
+        for m in re.finditer(r"(?<!\w)" + re.escape(name) + r"(?!\w)", text):
+            spans.append((name, m.start(), m.end()))
+    spans.sort(key=lambda s: s[1])
+    out = []
+    seen = set()
+    for name, s, e in spans:
+        if (s, e) in seen:
+            continue
+        seen.add((s, e))
+        out.append((name, s, e))
+    return out
+
+
+def extract_entities(text, known=()):
+    out = []
+    for name, _, _ in _mentions(text or "", tuple(known)):
+        if name not in out:
             out.append(name)
     return out
 
 
-def _entities_with_spans(sentence):
-    out = []
-    for m in _WIKILINK.finditer(sentence):
-        out.append((m.group(1).strip(), m.start(), m.end()))
-    return out
-
-
-def _first_entity_after(marks, pos):
-    for name, start, _ in marks:
-        if start >= pos:
-            return name
-    return None
-
-
-def extract_edges(text):
+def extract_edges(text, known=()):
+    known = tuple(known)
     edges = []
     for sentence in _SENT_SPLIT.split(text or ""):
-        marks = _entities_with_spans(sentence)
+        marks = _mentions(sentence, known)
         if len(marks) < 2:
             continue
         subject = marks[0][0]
-        typed = []
-        for rel, patterns in CUES.items():
-            for pat in patterns:
-                for m in re.finditer(r"\b" + pat + r"\b", sentence, re.IGNORECASE):
-                    dst = _first_entity_after(marks, m.end())
-                    if dst and dst != subject:
-                        triple = (subject, rel, dst)
-                        if triple not in typed:
-                            typed.append(triple)
-        if typed:
-            for triple in typed:
-                if triple not in edges:
-                    edges.append(triple)
-        else:
-            for name, _, _ in marks[1:]:
-                triple = (subject, "relates_to", name)
-                if triple not in edges:
-                    edges.append(triple)
+        prev_end = marks[0][2]
+        for name, start, end in marks[1:]:
+            if name == subject:
+                prev_end = end
+                continue
+            rel = _relation(sentence[prev_end:start]) or "relates_to"
+            triple = (subject, rel, name)
+            if triple not in edges:
+                edges.append(triple)
+            prev_end = end
     return edges
 
 
@@ -80,15 +125,16 @@ def wire_file(conn, path, source="deterministic"):
     text = _read(path)
     if not text:
         return
-    for name in extract_entities(text):
+    known = gs.all_names(conn)
+    conf = 1.0 if source == "deterministic" else 0.5
+    for name in extract_entities(text, known):
         gs.upsert_node(conn, type="entity", canonical_name=name,
                        provenance=[path], source=source)
-    for src_name, rel, dst_name in extract_edges(text):
+    for src_name, rel, dst_name in extract_edges(text, known):
         src = gs.upsert_node(conn, type="entity", canonical_name=src_name,
                              provenance=[path], source=source)
         dst = gs.upsert_node(conn, type="entity", canonical_name=dst_name,
                              provenance=[path], source=source)
-        conf = 1.0 if source == "deterministic" else 0.5
         gs.upsert_edge(conn, src=src, dst=dst, rel_type=rel,
                        confidence=conf, source=source, provenance=[path])
 

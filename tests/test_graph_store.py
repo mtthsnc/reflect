@@ -75,6 +75,10 @@ class GraphStoreTest(unittest.TestCase):
         self.assertIsNotNone(gs.resolve_node(self.conn, "A"))
         self.assertEqual(gs.neighbors(self.conn, a, depth=1), set())
 
+    def test_all_names_includes_canonical_and_aliases(self):
+        gs.upsert_node(self.conn, type="company", canonical_name="Acme", aliases=["Acme AI"])
+        self.assertEqual(gs.all_names(self.conn), {"Acme", "Acme AI"})
+
 
 if __name__ == "__main__":
     unittest.main()
