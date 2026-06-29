@@ -20,9 +20,6 @@ import shutil
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import graphify_sync
-
 # 1. Recursion guard: a reflect run sets this in its env; its own SessionEnd
 #    (reason "prompt_input_exit") must be a no-op, or we loop forever.
 if os.environ.get("REFLECT_RUNNING"):
@@ -39,6 +36,14 @@ except Exception:
 REFLECT_REASONS = {"clear", "logout", "prompt_input_exit", "other"}
 if event.get("reason") not in REFLECT_REASONS:
     sys.exit(0)
+
+graphify_sync = os.path.join(os.path.dirname(os.path.abspath(__file__)), "graphify_sync.py")
+try:
+    subprocess.Popen(["python3", graphify_sync],
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)
+except Exception:
+    pass
 
 HOME = os.path.expanduser("~")
 CLAUDE_HOME = os.environ.get("CLAUDE_HOME") or os.path.join(HOME, ".claude")
@@ -97,6 +102,4 @@ try:
     )
 except Exception:
     pass
-if not os.environ.get("REFLECT_RUNNING"):
-    graphify_sync.graphify_catchup()
 sys.exit(0)

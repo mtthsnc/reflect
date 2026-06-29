@@ -27,3 +27,7 @@ def graphify_catchup():
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     except Exception:
         return
+
+
+if __name__ == "__main__":
+    graphify_catchup()
