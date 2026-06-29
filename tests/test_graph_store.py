@@ -43,6 +43,38 @@ class GraphStoreTest(unittest.TestCase):
         gs.forget_path(self.conn, "m1.md")
         self.assertIsNone(gs.resolve_node(self.conn, "Bob"))
 
+    def test_node_merge_unions_aliases_and_provenance(self):
+        gs.upsert_node(self.conn, type="company", canonical_name="Acme", aliases=["Acme AI"], provenance=["m1.md"])
+        nid = gs.upsert_node(self.conn, type="company", canonical_name="Acme", aliases=["ACME"], provenance=["m2.md"])
+        row = self.conn.execute("SELECT aliases, provenance FROM nodes WHERE id=?", (nid,)).fetchone()
+        self.assertEqual(set(__import__("json").loads(row["aliases"])), {"Acme AI", "ACME"})
+        self.assertEqual(set(__import__("json").loads(row["provenance"])), {"m1.md", "m2.md"})
+
+    def test_edge_merge_takes_max_confidence_and_unions_provenance(self):
+        a = gs.upsert_node(self.conn, type="x", canonical_name="A")
+        b = gs.upsert_node(self.conn, type="x", canonical_name="B")
+        gs.upsert_edge(self.conn, src=a, dst=b, rel_type="relates_to", confidence=0.4, source="graphify", provenance=["m1.md"])
+        gs.upsert_edge(self.conn, src=a, dst=b, rel_type="relates_to", confidence=0.9, source="graphify", provenance=["m2.md"])
+        row = self.conn.execute("SELECT confidence, provenance FROM edges").fetchone()
+        self.assertEqual(row["confidence"], 0.9)
+        self.assertEqual(set(__import__("json").loads(row["provenance"])), {"m1.md", "m2.md"})
+
+    def test_source_precedence_upgrades_to_deterministic(self):
+        a = gs.upsert_node(self.conn, type="x", canonical_name="A")
+        b = gs.upsert_node(self.conn, type="x", canonical_name="B")
+        gs.upsert_edge(self.conn, src=a, dst=b, rel_type="works_at", confidence=0.5, source="graphify", provenance=["m1.md"])
+        gs.upsert_edge(self.conn, src=a, dst=b, rel_type="works_at", confidence=1.0, source="deterministic", provenance=["m1.md"])
+        row = self.conn.execute("SELECT source FROM edges").fetchone()
+        self.assertEqual(row["source"], "deterministic")
+
+    def test_forget_path_deletes_zombie_edge_but_keeps_shared_node(self):
+        a = gs.upsert_node(self.conn, type="x", canonical_name="A", provenance=["m1.md", "m2.md"])
+        b = gs.upsert_node(self.conn, type="x", canonical_name="B", provenance=["m1.md", "m2.md"])
+        gs.upsert_edge(self.conn, src=a, dst=b, rel_type="relates_to", confidence=1.0, source="deterministic", provenance=["m1.md"])
+        gs.forget_path(self.conn, "m1.md")
+        self.assertIsNotNone(gs.resolve_node(self.conn, "A"))
+        self.assertEqual(gs.neighbors(self.conn, a, depth=1), set())
+
 
 if __name__ == "__main__":
     unittest.main()

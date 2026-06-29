@@ -143,16 +143,28 @@ def provenance_for_nodes(conn, node_ids):
 
 def forget_path(conn, path):
     for row in conn.execute("SELECT id, provenance FROM nodes").fetchall():
-        prov = [p for p in _load_list(row["provenance"]) if p != path]
+        prov = _load_list(row["provenance"])
+        if path not in prov:
+            continue
+        prov = [p for p in prov if p != path]
         if prov:
             conn.execute("UPDATE nodes SET provenance=? WHERE id=?", (json.dumps(prov), row["id"]))
         else:
             conn.execute("DELETE FROM edges WHERE src=? OR dst=?", (row["id"], row["id"]))
             conn.execute("DELETE FROM nodes WHERE id=?", (row["id"],))
     for row in conn.execute("SELECT src, dst, rel_type, provenance FROM edges").fetchall():
-        prov = [p for p in _load_list(row["provenance"]) if p != path]
-        conn.execute(
-            "UPDATE edges SET provenance=? WHERE src=? AND dst=? AND rel_type=?",
-            (json.dumps(prov), row["src"], row["dst"], row["rel_type"]),
-        )
+        prov = _load_list(row["provenance"])
+        if path not in prov:
+            continue
+        prov = [p for p in prov if p != path]
+        if prov:
+            conn.execute(
+                "UPDATE edges SET provenance=? WHERE src=? AND dst=? AND rel_type=?",
+                (json.dumps(prov), row["src"], row["dst"], row["rel_type"]),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM edges WHERE src=? AND dst=? AND rel_type=?",
+                (row["src"], row["dst"], row["rel_type"]),
+            )
     conn.commit()
