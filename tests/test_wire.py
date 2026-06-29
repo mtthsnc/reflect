@@ -27,6 +27,12 @@ class WireTest(unittest.TestCase):
         self.assertNotIn(("Initech", "advises", "Globex"), edges)
         self.assertNotIn(("Initech", "relates_to", "Globex"), edges)
 
+    def test_extract_edges_no_spurious_cross_object_relates_to(self):
+        edges = wire.extract_edges("[[Alice]] knows [[Bob]] and also [[Carol]].")
+        self.assertIn(("Alice", "relates_to", "Bob"), edges)
+        self.assertIn(("Alice", "relates_to", "Carol"), edges)
+        self.assertNotIn(("Bob", "relates_to", "Carol"), edges)
+
     def test_wire_file_persists_nodes_and_edges(self):
         d = tempfile.mkdtemp()
         p = os.path.join(d, "m1.md")
