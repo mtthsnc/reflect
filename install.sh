@@ -56,7 +56,7 @@ fi
 
 # 4. Skills — symlinked so `git pull` updates them live.
 #    Back up any pre-existing real dir (or stale link) before linking.
-for s in reflect reflect-stage; do
+for s in reflect reflect-stage recall; do
   link="$SKILLS_DIR/$s"
   if [ -L "$link" ]; then
     rm -f "$link"
@@ -66,7 +66,7 @@ for s in reflect reflect-stage; do
   fi
   ln -sfn "$REPO/skills/$s" "$link"
 done
-say "linked skills: reflect, reflect-stage -> $SKILLS_DIR"
+say "linked skills: reflect, reflect-stage, recall -> $SKILLS_DIR"
 
 # Migration: review is now /reflect (was /reflect-curate); staging is /reflect-stage
 # (was /reflect). Drop the stale reflect-curate link so it isn't a dangling skill.
