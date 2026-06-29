@@ -46,6 +46,25 @@ the user didn't explicitly accept.
 - **Docs** → move into `config.targets.docs_dir/` (strip the `> Proposed …` line or keep it as
   provenance, user's choice).
 
+After writing each approved memory into `store/memories/`, wire it into the graph (Tier 1, deterministic, zero-LLM). Resolve the repo path from the installed hook location; in a standard install this is:
+
+    python3 "$(dirname "$(readlink -f ~/.claude/skills/reflect)")/../hooks/wire.py" <promoted-file>
+
+This never calls an LLM and must complete before the promotion is considered done.
+
+Once all approved memories are promoted, run the deep pass (Tier 2) if `graph.graphify_enabled` is true in config and the `graphify` CLI is installed:
+
+1. Run graphify in update mode over the store memories directory:
+
+       graphify ~/.claude/reflection/store/memories --update
+
+2. Merge its output into the reflect graph:
+
+       python3 "$(dirname "$(readlink -f ~/.claude/skills/reflect)")/../hooks/graphify_adapter.py" \
+         ~/.claude/reflection/store/memories/graphify-out/graph.json
+
+If graphify is not installed or errors, skip this step and continue. Tier-1 wiring already stands. Never block promotion on Tier-2.
+
 ### 4. Regenerate the store index
 After promotions, rewrite `config.targets.store_index` (`INDEX.md`) as a browsable list of every
 live memory and doc — one line each: `- [name](relative/path.md) — description`. This index is a
