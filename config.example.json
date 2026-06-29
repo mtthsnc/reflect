@@ -23,6 +23,12 @@
     "max_chars_per_entry": 1200,
     "reinject_after_turns": 20
   },
+  "graph": {
+    "enabled": true,
+    "expand_depth": 1,
+    "min_confidence": 0.0,
+    "graphify_enabled": true
+  },
   "thresholds": {
     "skill_min_repeat_count": 2,
     "max_memory_candidates_per_run": 12,

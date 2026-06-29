@@ -72,6 +72,42 @@ echo "$second" | grep -q "Body about design tokens" && bad "repeat prompt re-inj
 other="$(printf '{"prompt":"design tokens conformance gates","session_id":"sess2"}' | HOME="$FH" python3 "$REPO/hooks/retrieve.py")"
 echo "$other" | grep -q "Body about design tokens" && ok "fresh session injects full body" || bad "fresh session missing full body"
 
+echo "== graph edge expansion =="
+GH="$TMP/ghome"
+mkdir -p "$GH/.claude/reflection/store/memories"
+GBASE="$GH/.claude/reflection"
+python3 - "$GH" "$REPO" <<'PY'
+import json, sys
+gh, repo = sys.argv[1], sys.argv[2]
+base = f"{gh}/.claude/reflection"
+cfg = json.load(open(f"{repo}/config.example.json"))
+cfg["targets"] = {"memories_dir": f"{base}/store/memories", "docs_dir": f"{base}/store/docs"}
+json.dump(cfg, open(f"{base}/config.json", "w"))
+open(f"{base}/store/memories/acme.md", "w").write(
+    "---\nname: acme\ndescription: acme ai company profile\n---\n[[Bob]] works at [[Acme AI]].\n")
+open(f"{base}/store/memories/bob.md", "w").write(
+    "---\nname: bob\ndescription: engineer biography person\n---\n[[Bob]] is an engineer.\n")
+PY
+HOME="$GH" python3 "$REPO/hooks/wire.py" "$GBASE/store/memories/acme.md" "$GBASE/store/memories/bob.md"
+
+q='{"prompt":"acme ai company"}'
+on="$(printf '%s' "$q" | HOME="$GH" python3 "$REPO/hooks/retrieve.py")"
+echo "$on" | grep -q "## bob" && ok "graph expansion surfaces linked neighbor" || bad "graph expansion missed neighbor"
+
+python3 - "$GH" <<'PY'
+import json, sys
+base = f"{sys.argv[1]}/.claude/reflection"
+cfg = json.load(open(f"{base}/config.json"))
+cfg["graph"]["enabled"] = False
+json.dump(cfg, open(f"{base}/config.json", "w"))
+PY
+off="$(printf '%s' "$q" | HOME="$GH" python3 "$REPO/hooks/retrieve.py")"
+echo "$off" | grep -q "## bob" && bad "neighbor surfaced with graph disabled" || ok "ablation: no neighbor when graph off"
+
+echo "== unit tests =="
+( cd "$REPO" && python3 -m unittest discover -s tests -p 'test_*.py' >/dev/null 2>&1 ) \
+  && ok "python unit tests pass" || bad "python unit tests failed"
+
 echo
 if [ "$fail" -ne 0 ]; then
   echo "TESTS: FAIL"
